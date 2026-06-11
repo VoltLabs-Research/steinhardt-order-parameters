@@ -1,0 +1,269 @@
+{
+  "workflow": {
+    "nodes": [
+      {
+        "id": "plugin-metadata",
+        "type": "modifier",
+        "position": {
+          "x": 240,
+          "y": 160
+        },
+        "data": {
+          "modifier": {
+            "name": "Steinhardt Order Parameters",
+            "key": "steinhardt-order-parameters",
+            "icon": "HiSparkles",
+            "author": "Rodolfo Herrera",
+            "license": "MIT",
+            "version": "1.0.0",
+            "homepage": "https://github.com/rodyherrera/Volterra",
+            "description": "Computes bond-orientational order parameters q_l, Wigner-3j invariants w_l and normalized w_l_hat per atom (Steinhardt 1983; Lechner-Dellago 2008). Critical for crystallinity, nucleation and liquid/solid discrimination. Ports LAMMPS compute orientorder/atom."
+          }
+        }
+      },
+      {
+        "id": "plugin-arguments",
+        "type": "arguments",
+        "position": {
+          "x": 528,
+          "y": 208
+        },
+        "data": {
+          "arguments": {
+            "arguments": [
+              {
+                "argument": "qlist",
+                "type": "string",
+                "label": "Orders (comma-separated list of l)",
+                "default": "4,6,8,10,12"
+              },
+              {
+                "argument": "nnn",
+                "type": "number",
+                "label": "Nearest Neighbors (0 = use cutoff)",
+                "default": 12,
+                "min": 0,
+                "max": 64,
+                "step": 1
+              },
+              {
+                "argument": "cutoff",
+                "type": "number",
+                "label": "Cutoff Radius",
+                "default": 0,
+                "min": 0,
+                "max": 20,
+                "step": 0.1,
+                "visibleWhen": {
+                  "argument": "nnn",
+                  "operator": "equals",
+                  "value": 0
+                }
+              },
+              {
+                "argument": "wl",
+                "type": "boolean",
+                "label": "Compute w_l",
+                "default": false
+              },
+              {
+                "argument": "wlHat",
+                "type": "boolean",
+                "label": "Compute w_l_hat (normalized)",
+                "default": false
+              },
+              {
+                "argument": "components",
+                "type": "number",
+                "label": "Emit Q_l^m components for l (-1 disables)",
+                "default": -1,
+                "min": -1,
+                "max": 20,
+                "step": 1
+              },
+              {
+                "argument": "onlySelected",
+                "type": "boolean",
+                "label": "Only Selected Atoms",
+                "default": false
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "trajectory-context",
+        "type": "context",
+        "position": {
+          "x": 816,
+          "y": 160
+        },
+        "data": {
+          "context": {
+            "source": "trajectory_dumps"
+          }
+        }
+      },
+      {
+        "id": "foreach-trajectory-dumps",
+        "type": "forEach",
+        "position": {
+          "x": 1088,
+          "y": 208
+        },
+        "data": {
+          "forEach": {
+            "iterableSource": "{{ trajectory-context.trajectory_dumps }}"
+          }
+        }
+      },
+      {
+        "id": "analysis-entrypoint",
+        "type": "entrypoint",
+        "position": {
+          "x": 1392,
+          "y": 208
+        },
+        "data": {
+          "entrypoint": {
+            "type": "executable",
+            "binary": "steinhardt-order-parameters",
+            "binaryObjectPath": "__UPLOAD_BINARY_OBJECT_PATH__",
+            "binaryFileName": "steinhardt-order-parameters",
+            "arguments": "{{ foreach-trajectory-dumps.currentValue.path }} {{ foreach-trajectory-dumps.outputPath }} {{ plugin-arguments.as_str }}",
+            "timeout": -1
+          }
+        }
+      },
+      {
+        "id": "primary-exposure",
+        "type": "exposure",
+        "position": {
+          "x": 1712,
+          "y": 208
+        },
+        "data": {
+          "exposure": {
+            "name": "Steinhardt Order",
+            "icon": "HiSparkles",
+            "results": "steinhardt.parquet",
+            "iterable": ""
+          }
+        }
+      },
+      {
+        "id": "steinhardt-model-exposure",
+        "type": "exposure",
+        "position": {
+          "x": 1712,
+          "y": 336
+        },
+        "data": {
+          "exposure": {
+            "name": "Steinhardt Model",
+            "icon": "HiSparkles",
+            "results": "atoms.parquet",
+            "iterable": "",
+            "properties": [
+              {
+                "key": "q6",
+                "label": "q6 (bond order)",
+                "type": "double"
+              },
+              {
+                "key": "q_4",
+                "label": "q_4",
+                "type": "double"
+              },
+              {
+                "key": "q_6",
+                "label": "q_6",
+                "type": "double"
+              },
+              {
+                "key": "q_8",
+                "label": "q_8",
+                "type": "double"
+              },
+              {
+                "key": "q_10",
+                "label": "q_10",
+                "type": "double"
+              },
+              {
+                "key": "q_12",
+                "label": "q_12",
+                "type": "double"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "steinhardt-model-export",
+        "type": "export",
+        "position": {
+          "x": 2032,
+          "y": 336
+        },
+        "data": {
+          "export": {
+            "exporter": "AtomisticExporter",
+            "type": "glb"
+          }
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge-metadata-arguments",
+        "source": "plugin-metadata",
+        "sourceHandle": "output",
+        "target": "plugin-arguments",
+        "targetHandle": "input"
+      },
+      {
+        "id": "edge-arguments-context",
+        "source": "plugin-arguments",
+        "sourceHandle": "output",
+        "target": "trajectory-context",
+        "targetHandle": "input"
+      },
+      {
+        "id": "edge-context-foreach",
+        "source": "trajectory-context",
+        "sourceHandle": "output",
+        "target": "foreach-trajectory-dumps",
+        "targetHandle": "input"
+      },
+      {
+        "id": "edge-foreach-entrypoint",
+        "source": "foreach-trajectory-dumps",
+        "sourceHandle": "output",
+        "target": "analysis-entrypoint",
+        "targetHandle": "input"
+      },
+      {
+        "id": "edge-entrypoint-exposure",
+        "source": "analysis-entrypoint",
+        "sourceHandle": "output",
+        "target": "primary-exposure",
+        "targetHandle": "input"
+      },
+      {
+        "id": "edge-entrypoint-steinhardt-model-exposure",
+        "source": "analysis-entrypoint",
+        "sourceHandle": "output",
+        "target": "steinhardt-model-exposure",
+        "targetHandle": "input"
+      },
+      {
+        "id": "edge-steinhardt-model-exposure-steinhardt-model-export",
+        "source": "steinhardt-model-exposure",
+        "sourceHandle": "output",
+        "target": "steinhardt-model-export",
+        "targetHandle": "input"
+      }
+    ]
+  }
+}

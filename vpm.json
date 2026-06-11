@@ -1,0 +1,28 @@
+{
+  "name": "@voltlabs/steinhardt-order-parameters",
+  "version": "1.0.0",
+  "kind": "workflow",
+  "publisher": "voltlabs",
+  "description": "Per-atom Steinhardt bond-orientational order parameters q_l, Wigner-3j w_l and Lechner-Dellago w_l_hat; ports LAMMPS compute orientorder/atom.",
+  "license": "MIT",
+  "homepage": "https://github.com/voltlabs-research/steinhardt-order-parameters",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/voltlabs-research/steinhardt-order-parameters"
+  },
+  "entrypoints": {
+    "binary": "steinhardt-order-parameters-plugin.zip",
+    "workflow": "plugin.json"
+  },
+  "platforms": [
+    "linux-x86_64",
+    "darwin-arm64",
+    "windows-x86_64"
+  ],
+  "coretoolkit": "1.0.0",
+  "files": [
+    "plugin.json",
+    "bin",
+    "lib"
+  ]
+}
