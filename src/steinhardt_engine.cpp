@@ -26,7 +26,7 @@ namespace {
 // for bit-for-bit agreement with the reference implementation.
 constexpr double MY_EPSILON = 10.0 * DBL_EPSILON;
 constexpr double QEPSILON   = 1.0e-6;
-constexpr double MY_4PI     = 4.0 * M_PI;
+constexpr double MY_4PI     = 4.0 * PI;
 
 // q_6-based structure thresholds (see class docstring).
 constexpr double Q6_LIQUID_MAX   = 0.30;
