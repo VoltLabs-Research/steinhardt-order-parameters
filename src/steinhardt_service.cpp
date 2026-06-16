@@ -164,12 +164,6 @@ json SteinhardtService::compute(const LammpsParser::Frame& frame, const std::str
             const int label = i < labels.size() ? labels[i] : SteinhardtEngine::STRUCTURE_LIQUID;
             return std::string(SteinhardtEngine::structureLabelName(label));
         };
-        // Preserve the stable 0/1/2 LIQUID/INTERFACE/CRYSTAL code (the reason for
-        // calling streamAtomsToParquet directly instead of serializePluginOutput,
-        // whose OutputConfig lacks a StructureIdResolver).
-        auto structureIdResolver = [&labels](std::size_t i) -> int {
-            return i < labels.size() ? labels[i] : SteinhardtEngine::STRUCTURE_LIQUID;
-        };
         auto perAtom = [&](ColumnarAtomWriter& w, std::size_t i){
             const double* row = base ? base + i * static_cast<std::size_t>(cols) : nullptr;
 
@@ -205,7 +199,10 @@ json SteinhardtService::compute(const LammpsParser::Frame& frame, const std::str
             }
         };
 
-        Volt::streamAtomsToParquet(outputBase + "_atoms.parquet", frame, bucketResolver, perAtom, structureIdResolver);
+        // Steinhardt is not structural identification — the q6 label drives only the
+        // bucket/q6 property column, not structure_id (which would clobber an upstream
+        // classifier in a pipeline). structure_id/structure_name stay off (default).
+        Volt::streamAtomsToParquet(outputBase + "_atoms.parquet", frame, bucketResolver, perAtom);
     }
 
     const auto endTime = std::chrono::high_resolution_clock::now();

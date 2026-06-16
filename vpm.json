@@ -1,6 +1,6 @@
 {
   "name": "@voltlabs/steinhardt-order-parameters",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "kind": "workflow",
   "publisher": "voltlabs",
   "description": "Per-atom Steinhardt bond-orientational order parameters q_l, Wigner-3j w_l and Lechner-Dellago w_l_hat; ports LAMMPS compute orientorder/atom.",
