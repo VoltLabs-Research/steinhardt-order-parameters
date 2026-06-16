@@ -15,7 +15,7 @@
             "icon": "HiSparkles",
             "author": "Rodolfo Herrera",
             "license": "MIT",
-            "version": "1.0.3",
+            "version": "1.0.4",
             "homepage": "https://github.com/rodyherrera/Volterra",
             "description": "Computes bond-orientational order parameters q_l, Wigner-3j invariants w_l and normalized w_l_hat per atom (Steinhardt 1983; Lechner-Dellago 2008). Critical for crystallinity, nucleation and liquid/solid discrimination. Ports LAMMPS compute orientorder/atom."
           }
