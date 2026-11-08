@@ -9,6 +9,7 @@
 
 #include <chrono>
 #include <cstddef>
+#include <exception>
 #include <memory>
 #include <string>
 #include <vector>
@@ -152,10 +153,11 @@ json SteinhardtService::compute(const LammpsParser::Frame& frame, const std::str
 
     if(!outputBase.empty()){
         const std::string summaryPath = outputBase + "_steinhardt.parquet";
-        if(JsonUtils::writeJsonToParquet(result, summaryPath)){
+        try{
+            JsonUtils::writeJsonToParquet(result, summaryPath);
             spdlog::info("Steinhardt summary parquet written to {}", summaryPath);
-        }else{
-            spdlog::warn("Could not write Steinhardt summary parquet: {}", summaryPath);
+        }catch(const std::exception& error){
+            spdlog::warn("Could not write Steinhardt summary parquet {}: {}", summaryPath, error.what());
         }
 
         // Group by the q_6-derived structure label so the AtomisticExporter GLB
