@@ -4,7 +4,7 @@ from conan.tools.cmake import CMake, CMakeToolchain, CMakeDeps, cmake_layout
 
 class SteinhardtOrderParametersConan(ConanFile):
     name = "steinhardt-order-parameters"
-    version = "1.0.5"
+    version = "1.0.6"
     package_type = "static-library"
     license = "MIT"
     settings = "os", "arch", "compiler", "build_type"
