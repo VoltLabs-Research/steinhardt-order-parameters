@@ -12,6 +12,7 @@
           "modifier": {
             "name": "Steinhardt Order Parameters",
             "key": "steinhardt-order-parameters",
+            "category": "Local order",
             "icon": "HiSparkles",
             "author": "Rodolfo Herrera",
             "license": "MIT",
