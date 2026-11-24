@@ -5,6 +5,7 @@ Computes per-atom bond-orientational order parameters q_l, Wigner-3j invariants 
 ## Install
 
 ```bash
+npm install -g @voltstack/vpm
 vpm install @voltlabs/steinhardt-order-parameters
 ```
 
