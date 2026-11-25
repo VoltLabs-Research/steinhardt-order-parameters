@@ -2,15 +2,14 @@
 
 #include <volt/analysis/cutoff_neighbor_finder.h>
 #include <volt/analysis/nearest_neighbor_finder.h>
+#include <volt/core/progress.h>
 
 #include <oneapi/tbb/blocked_range.h>
 #include <oneapi/tbb/enumerable_thread_specific.h>
 #include <oneapi/tbb/parallel_for.h>
-#include <spdlog/spdlog.h>
 
 #include <algorithm>
 #include <array>
-#include <atomic>
 #include <cfloat>
 #include <cmath>
 #include <cstdint>
@@ -439,6 +438,11 @@ void SteinhardtEngine::perform(){
         );
     }
 
+    ProgressSteps steps({
+        {"Building neighbor lists", 1.0},
+        {"Computing Steinhardt order parameters", 9.0},
+    });
+
     // Prepare whichever neighbor finder we need. The two code paths share
     // the same per-atom kernel.
     std::unique_ptr<NearestNeighborFinder> nearestFinder;
@@ -455,6 +459,7 @@ void SteinhardtEngine::perform(){
             throw std::runtime_error("SteinhardtEngine: cutoff neighbor finder prepare() failed");
         }
     }
+    steps.next();
 
     struct ThreadScratch{
         std::vector<std::array<double, 2>> qnm;      // (nqlist * stride) complex accumulators
@@ -472,8 +477,7 @@ void SteinhardtEngine::perform(){
         }
     );
 
-    std::atomic<std::size_t> processedCount{0};
-    const std::size_t reportInterval = std::max<std::size_t>(1, particleCount / 20);
+    ProgressReporter progress("Computing Steinhardt order parameters", particleCount);
 
     oneapi::tbb::parallel_for(
         oneapi::tbb::blocked_range<std::size_t>(0, particleCount, 1024),
@@ -549,12 +553,8 @@ void SteinhardtEngine::perform(){
                         s.counts[label]++;
                     }
                 }
-
-                const std::size_t p = processedCount.fetch_add(1, std::memory_order_relaxed) + 1;
-                if((p % reportInterval) == 0){
-                    spdlog::info("Steinhardt: processed {}/{} atoms", p, particleCount);
-                }
             }
+            progress.advance(range.size());
         }
     );
 

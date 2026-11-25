@@ -3,6 +3,7 @@
 #include <volt/cli/common.h>
 #include <volt/core/analysis_result.h>
 #include <volt/core/frame_adapter.h>
+#include <volt/core/progress.h>
 #include <volt/plugin/output_files.h>
 #include <volt/steinhardt_log.h>
 #include <volt/utilities/json_utils.h>
@@ -107,12 +108,18 @@ json SteinhardtService::compute(const LammpsParser::Frame& frame, const std::str
         selection
     );
 
+    // Weighted by how long each step took on a 100k-atom BCC frame.
+    ProgressSteps steps({
+        {"Computing Steinhardt order parameters", 1.0},
+        {"Writing outputs", 2.0},
+    });
     try{
         engine.perform();
     }catch(const std::exception& ex){
         return AnalysisResult::failure(std::string("Engine failed: ") + ex.what());
     }
     log.dump(engine);
+    steps.next();
 
     auto orderProp = engine.orderParameters();
     const double* base = orderProp ? orderProp->constDataDouble() : nullptr;
