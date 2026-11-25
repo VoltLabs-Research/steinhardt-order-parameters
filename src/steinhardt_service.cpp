@@ -1,13 +1,15 @@
 #include <volt/steinhardt_service.h>
 
+#include <volt/cli/common.h>
 #include <volt/core/analysis_result.h>
 #include <volt/core/frame_adapter.h>
+#include <volt/plugin/output_files.h>
+#include <volt/steinhardt_log.h>
 #include <volt/utilities/json_utils.h>
 #include <volt/utilities/parquet_atom_writer.h>
 
 #include <spdlog/spdlog.h>
 
-#include <chrono>
 #include <cstddef>
 #include <exception>
 #include <memory>
@@ -24,6 +26,19 @@ SteinhardtService::SteinhardtService()
 
 void SteinhardtService::setQList(const std::vector<int>& qlist){
     _parameters.qlist = qlist;
+}
+
+std::vector<int> SteinhardtService::parseQList(const std::string& csv){
+    std::vector<int> qlist;
+    for(const std::string& token : CLI::splitList(csv, ',')){
+        try{
+            const int l = std::stoi(token);
+            if(l >= 0) qlist.push_back(l);
+        }catch(...){
+        }
+    }
+    if(qlist.empty()) qlist = {4, 6, 8, 10, 12};
+    return qlist;
 }
 
 void SteinhardtService::setNnn(int nnn){
@@ -51,7 +66,7 @@ void SteinhardtService::setOnlySelected(bool enabled){
 }
 
 json SteinhardtService::compute(const LammpsParser::Frame& frame, const std::string& outputBase){
-    const auto startTime = std::chrono::high_resolution_clock::now();
+    SteinhardtLog log;
 
     if(frame.natoms <= 0){
         return AnalysisResult::failure("Invalid number of atoms");
@@ -78,25 +93,11 @@ json SteinhardtService::compute(const LammpsParser::Frame& frame, const std::str
     // Selection column only when the user asked for onlySelected.
     std::shared_ptr<ParticleProperty> selection;
     if(_onlySelected){
-        for(const char* col : {"Selection", "selection", "v_selection"}){
-            selection = FrameAdapter::createIntPropertyShared(frame, col);
-            if(selection) break;
-        }
+        selection = FrameAdapter::findColumnShared(frame, {"Selection", "selection", "v_selection"}, DataType::Int);
         if(!selection){
             spdlog::warn("--onlySelected requested but no Selection column found; classifying all atoms.");
         }
     }
-
-    spdlog::info(
-        "Starting Steinhardt analysis (nqlist={}, nnn={}, cutoff={}, wl={}, wlHat={}, components={}, onlySelected={})",
-        _parameters.qlist.size(),
-        _parameters.nnn,
-        _parameters.cutoff,
-        _parameters.wlFlag,
-        _parameters.wlHatFlag,
-        _parameters.components,
-        _onlySelected
-    );
 
     SteinhardtEngine engine(
         positions.get(),
@@ -111,6 +112,7 @@ json SteinhardtService::compute(const LammpsParser::Frame& frame, const std::str
     }catch(const std::exception& ex){
         return AnalysisResult::failure(std::string("Engine failed: ") + ex.what());
     }
+    log.dump(engine);
 
     auto orderProp = engine.orderParameters();
     const double* base = orderProp ? orderProp->constDataDouble() : nullptr;
@@ -152,13 +154,13 @@ json SteinhardtService::compute(const LammpsParser::Frame& frame, const std::str
     result["sub_listings"] = {{"structures", structRows}};
 
     if(!outputBase.empty()){
-        const std::string summaryPath = outputBase + "_steinhardt.parquet";
+        WrittenTable summary{"Steinhardt summary", outputPath(outputBase, "steinhardt")};
         try{
-            JsonUtils::writeJsonToParquet(result, summaryPath);
-            spdlog::info("Steinhardt summary parquet written to {}", summaryPath);
+            JsonUtils::writeJsonToParquet(result, summary.path);
         }catch(const std::exception& error){
-            spdlog::warn("Could not write Steinhardt summary parquet {}: {}", summaryPath, error.what());
+            summary.error = error.what();
         }
+        log.dump(summary);
 
         // Group by the q_6-derived structure label so the AtomisticExporter GLB
         // splits Liquid-like / Interface / Crystal-like.
@@ -204,13 +206,10 @@ json SteinhardtService::compute(const LammpsParser::Frame& frame, const std::str
         // Steinhardt is not structural identification — the q6 label drives only the
         // bucket/q6 property column, not structure_id (which would clobber an upstream
         // classifier in a pipeline). structure_id/structure_name stay off (default).
-        Volt::streamAtomsToParquet(outputBase + "_atoms.parquet", frame, bucketResolver, perAtom);
+        Volt::streamAtomsToParquet(outputPath(outputBase, "atoms"), frame, bucketResolver, perAtom);
     }
 
-    const auto endTime = std::chrono::high_resolution_clock::now();
-    const auto elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
-    spdlog::info("Steinhardt analysis finished in {} ms", elapsedMs);
-
+    log.dump(*this);
     return result;
 }
 

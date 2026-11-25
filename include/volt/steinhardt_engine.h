@@ -5,6 +5,7 @@
 #include <volt/core/particle_property.h>
 
 #include <array>
+#include <cfloat>
 #include <cstddef>
 #include <memory>
 #include <vector>
@@ -106,6 +107,21 @@ private:
     ) const;
 
 private:
+    // LAMMPS `MY_EPSILON` (10 * DBL_EPSILON) and `QEPSILON` (1e-6) are required
+    // for bit-for-bit agreement with the reference implementation.
+    static constexpr double MY_EPSILON = 10.0 * DBL_EPSILON;
+    static constexpr double QEPSILON   = 1.0e-6;
+    static constexpr double MY_4PI     = 4.0 * PI;
+
+    // q_6-based structure thresholds (see class docstring).
+    static constexpr double Q6_LIQUID_MAX    = 0.30;
+    static constexpr double Q6_INTERFACE_MAX = 0.45;
+
+    // Heuristic: among the requested orders pick the entry whose l is closest
+    // to 6; q_6 is the canonical crystallinity discriminator.
+    static int pickReferenceIndex(const std::vector<int>& qlist);
+    static int classifyFromQ6(double q6);
+
     // --- LAMMPS-compatible math helpers (ported verbatim) ---
     static double polarPrefactor(int l, int m, double costheta);
     static double associatedLegendre(int l, int m, double x);

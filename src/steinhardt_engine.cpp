@@ -20,21 +20,7 @@
 
 namespace Volt{
 
-namespace {
-
-// LAMMPS `MY_EPSILON` (10 * DBL_EPSILON) and `QEPSILON` (1e-6) are required
-// for bit-for-bit agreement with the reference implementation.
-constexpr double MY_EPSILON = 10.0 * DBL_EPSILON;
-constexpr double QEPSILON   = 1.0e-6;
-constexpr double MY_4PI     = 4.0 * PI;
-
-// q_6-based structure thresholds (see class docstring).
-constexpr double Q6_LIQUID_MAX   = 0.30;
-constexpr double Q6_INTERFACE_MAX = 0.45;
-
-// Heuristic: among the requested orders pick the entry whose l is closest
-// to 6; q_6 is the canonical crystallinity discriminator.
-int pickReferenceIndex(const std::vector<int>& qlist){
+int SteinhardtEngine::pickReferenceIndex(const std::vector<int>& qlist){
     int best = -1;
     int bestDist = std::numeric_limits<int>::max();
     for(std::size_t i = 0; i < qlist.size(); ++i){
@@ -47,13 +33,11 @@ int pickReferenceIndex(const std::vector<int>& qlist){
     return best;
 }
 
-int classifyFromQ6(double q6){
-    if(q6 < Q6_LIQUID_MAX)   return SteinhardtEngine::STRUCTURE_LIQUID;
-    if(q6 < Q6_INTERFACE_MAX) return SteinhardtEngine::STRUCTURE_INTERFACE;
-    return SteinhardtEngine::STRUCTURE_CRYSTAL;
+int SteinhardtEngine::classifyFromQ6(double q6){
+    if(q6 < Q6_LIQUID_MAX)   return STRUCTURE_LIQUID;
+    if(q6 < Q6_INTERFACE_MAX) return STRUCTURE_INTERFACE;
+    return STRUCTURE_CRYSTAL;
 }
-
-} // namespace
 
 // ---------------------------------------------------------------------------
 // Math helpers ported verbatim from LAMMPS compute_orientorder_atom.cpp.
@@ -430,10 +414,7 @@ void SteinhardtEngine::computeBondOrderParameters(
 // ---------------------------------------------------------------------------
 void SteinhardtEngine::perform(){
     const std::size_t particleCount = _positions->size();
-    if(particleCount == 0){
-        spdlog::warn("SteinhardtEngine: no atoms in frame.");
-        return;
-    }
+    if(particleCount == 0) return;
 
     const int nqlist = static_cast<int>(_parameters.qlist.size());
     const int stride = _qmax + 1;
@@ -468,19 +449,11 @@ void SteinhardtEngine::perform(){
         if(!nearestFinder->prepare(_positions, _simCell)){
             throw std::runtime_error("SteinhardtEngine: nearest neighbor finder prepare() failed");
         }
-        spdlog::info(
-            "Steinhardt: using {} nearest neighbors per atom (nqlist={})",
-            nnn, nqlist
-        );
     }else{
         cutoffFinder = std::make_unique<CutoffNeighborFinder>();
         if(!cutoffFinder->prepare(cutoff, _positions, _simCell)){
             throw std::runtime_error("SteinhardtEngine: cutoff neighbor finder prepare() failed");
         }
-        spdlog::info(
-            "Steinhardt: using cutoff = {} (nqlist={})",
-            cutoff, nqlist
-        );
     }
 
     struct ThreadScratch{
@@ -589,13 +562,6 @@ void SteinhardtEngine::perform(){
     for(const auto& s : scratch){
         for(int k = 0; k < 3; ++k) _structureCounts[k] += s.counts[k];
     }
-
-    spdlog::info(
-        "Steinhardt: liquid={}, interface={}, crystal={}",
-        _structureCounts[STRUCTURE_LIQUID],
-        _structureCounts[STRUCTURE_INTERFACE],
-        _structureCounts[STRUCTURE_CRYSTAL]
-    );
 }
 
 const char* SteinhardtEngine::structureLabelName(int label){

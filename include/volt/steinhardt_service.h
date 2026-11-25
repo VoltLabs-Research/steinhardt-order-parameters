@@ -25,6 +25,9 @@ public:
     SteinhardtService();
 
     void setQList(const std::vector<int>& qlist);
+    // The orders l of the --qlist CSV ("4,6,8,10,12"); negative and malformed entries are dropped, and the default
+    // set stands in when none is left, so compute() never sees an empty list.
+    static std::vector<int> parseQList(const std::string& csv);
     void setNnn(int nnn);
     void setCutoff(double cutoff);
     void setWlFlag(bool enabled);
