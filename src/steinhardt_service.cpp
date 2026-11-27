@@ -175,7 +175,7 @@ json SteinhardtService::compute(const LammpsParser::Frame& frame, const std::str
             const int label = i < labels.size() ? labels[i] : SteinhardtEngine::STRUCTURE_LIQUID;
             return std::string(SteinhardtEngine::structureLabelName(label));
         };
-        auto perAtom = [&](ColumnarAtomWriter& w, std::size_t i){
+        auto perAtom = [&](ColumnarRowWriter& w, std::size_t i){
             const double* row = base ? base + i * static_cast<std::size_t>(cols) : nullptr;
 
             // Per-l scalar columns (q_4, q_6, ...) for direct coloring/filtering,
